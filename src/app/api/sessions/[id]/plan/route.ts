@@ -91,11 +91,9 @@ export async function POST(
     }
 
     return NextResponse.json({ plan: planRecord });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to generate AI lesson plan";
     console.error("AI Session Plan Error:", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to generate AI lesson plan" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -44,44 +44,53 @@ export default function StudentDetailPage({
 
   const supabase = createClient();
 
-  const fetchStudentData = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
-
-    // Fetch student info
-    const { data: studentData, error: sErr } = await supabase
-      .from("students")
-      .select("*")
-      .eq("id", studentId)
-      .single();
-
-    if (sErr || !studentData) {
-      setError("Student not found.");
-      setIsLoading(false);
-      return;
-    }
-
-    setStudent(studentData);
-
-    // Fetch sessions
-    const { data: sessionData, error: sessErr } = await supabase
-      .from("sessions")
-      .select("id, topic, scheduled_at, status")
-      .eq("student_id", studentId)
-      .order("scheduled_at", { ascending: true });
-
-    if (sessErr) {
-      setError(`Failed to fetch sessions: ${sessErr.message}`);
-    } else {
-      setSessions(sessionData || []);
-    }
-
-    setIsLoading(false);
-  }, [studentId, supabase]);
-
   useEffect(() => {
+    let isMounted = true;
+
+    async function fetchStudentData() {
+      setIsLoading(true);
+      setError("");
+
+      // Fetch student info
+      const { data: studentData, error: sErr } = await supabase
+        .from("students")
+        .select("*")
+        .eq("id", studentId)
+        .single();
+
+      if (!isMounted) return;
+
+      if (sErr || !studentData) {
+        setError("Student not found.");
+        setIsLoading(false);
+        return;
+      }
+
+      setStudent(studentData);
+
+      // Fetch sessions
+      const { data: sessionData, error: sessErr } = await supabase
+        .from("sessions")
+        .select("id, topic, scheduled_at, status")
+        .eq("student_id", studentId)
+        .order("scheduled_at", { ascending: true });
+
+      if (isMounted) {
+        if (sessErr) {
+          setError(`Failed to fetch sessions: ${sessErr.message}`);
+        } else {
+          setSessions(sessionData || []);
+        }
+        setIsLoading(false);
+      }
+    }
+
     fetchStudentData();
-  }, [fetchStudentData]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studentId, supabase]);
 
   const handleGenerateProgressSummary = async () => {
     setIsGeneratingProgress(true);
@@ -98,8 +107,9 @@ export default function StudentDetailPage({
       } else {
         setProgressSummary(data.summary);
       }
-    } catch (err: any) {
-      setProgressError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setProgressError(msg);
     } finally {
       setIsGeneratingProgress(false);
     }

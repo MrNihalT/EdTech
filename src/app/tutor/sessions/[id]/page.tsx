@@ -65,62 +65,72 @@ export default function SessionWorkspacePage({
 
   const supabase = createClient();
 
-  const fetchSessionWorkspace = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
-
-    // Fetch session details
-    const { data: sessData, error: sessErr } = await supabase
-      .from("sessions")
-      .select("*, students(*)")
-      .eq("id", sessionId)
-      .single();
-
-    if (sessErr || !sessData) {
-      setError("Session not found.");
-      setIsLoading(false);
-      return;
-    }
-
-    setSession(sessData as unknown as SessionDetail);
-    setNotes(sessData.notes || "");
-
-    // Fetch existing AI lesson plan if generated
-    const { data: planData } = await supabase
-      .from("ai_session_plans")
-      .select("objectives, lesson_outline, practice_questions")
-      .eq("session_id", sessionId)
-      .maybeSingle();
-
-    if (planData) {
-      setLessonPlan({
-        objectives: Array.isArray(planData.objectives) ? planData.objectives : [],
-        lesson_outline: Array.isArray(planData.lesson_outline) ? planData.lesson_outline : [],
-        practice_questions: Array.isArray(planData.practice_questions) ? planData.practice_questions : [],
-      });
-    }
-
-    // Fetch existing AI review if generated
-    const { data: reviewData } = await supabase
-      .from("ai_session_reviews")
-      .select("summary, homework, next_topic")
-      .eq("session_id", sessionId)
-      .maybeSingle();
-
-    if (reviewData) {
-      setSessionReview({
-        summary: reviewData.summary,
-        homework: Array.isArray(reviewData.homework) ? reviewData.homework : [],
-        next_topic: reviewData.next_topic,
-      });
-    }
-
-    setIsLoading(false);
-  }, [sessionId, supabase]);
-
   useEffect(() => {
+    let isMounted = true;
+
+    async function fetchSessionWorkspace() {
+      setIsLoading(true);
+      setError("");
+
+      // Fetch session details
+      const { data: sessData, error: sessErr } = await supabase
+        .from("sessions")
+        .select("*, students(*)")
+        .eq("id", sessionId)
+        .single();
+
+      if (!isMounted) return;
+
+      if (sessErr || !sessData) {
+        setError("Session not found.");
+        setIsLoading(false);
+        return;
+      }
+
+      setSession(sessData as unknown as SessionDetail);
+      setNotes(sessData.notes || "");
+
+      // Fetch existing AI lesson plan if generated
+      const { data: planData } = await supabase
+        .from("ai_session_plans")
+        .select("objectives, lesson_outline, practice_questions")
+        .eq("session_id", sessionId)
+        .maybeSingle();
+
+      if (planData && isMounted) {
+        setLessonPlan({
+          objectives: Array.isArray(planData.objectives) ? planData.objectives : [],
+          lesson_outline: Array.isArray(planData.lesson_outline) ? planData.lesson_outline : [],
+          practice_questions: Array.isArray(planData.practice_questions) ? planData.practice_questions : [],
+        });
+      }
+
+      // Fetch existing AI review if generated
+      const { data: reviewData } = await supabase
+        .from("ai_session_reviews")
+        .select("summary, homework, next_topic")
+        .eq("session_id", sessionId)
+        .maybeSingle();
+
+      if (reviewData && isMounted) {
+        setSessionReview({
+          summary: reviewData.summary,
+          homework: Array.isArray(reviewData.homework) ? reviewData.homework : [],
+          next_topic: reviewData.next_topic,
+        });
+      }
+
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    }
+
     fetchSessionWorkspace();
-  }, [fetchSessionWorkspace]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sessionId, supabase]);
 
   // Debounced ~700ms autosave function for notes
   const saveNotesToServer = useCallback(
@@ -172,8 +182,9 @@ export default function SessionWorkspacePage({
       } else {
         setSession((prev) => (prev ? { ...prev, status: "in_progress" } : null));
       }
-    } catch (err: any) {
-      setAiError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setAiError(msg);
     } finally {
       setIsTransitioningState(false);
     }
@@ -197,8 +208,9 @@ export default function SessionWorkspacePage({
       } else {
         setSession((prev) => (prev ? { ...prev, status: "completed" } : null));
       }
-    } catch (err: any) {
-      setAiError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setAiError(msg);
     } finally {
       setIsTransitioningState(false);
     }
@@ -218,8 +230,9 @@ export default function SessionWorkspacePage({
       } else {
         setLessonPlan(data.plan);
       }
-    } catch (err: any) {
-      setAiError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setAiError(msg);
     } finally {
       setIsGeneratingPlan(false);
     }
@@ -239,8 +252,9 @@ export default function SessionWorkspacePage({
         setSessionReview(data.review);
         setSession((prev) => (prev ? { ...prev, status: "ai_reviewed" } : null));
       }
-    } catch (err: any) {
-      setAiError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setAiError(msg);
     } finally {
       setIsGeneratingReview(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -44,7 +44,7 @@ export default function TutorStudentsPage() {
 
   const supabase = createClient();
 
-  const fetchStudents = useCallback(async () => {
+  const loadStudents = async () => {
     setIsLoading(true);
     setError("");
 
@@ -52,7 +52,10 @@ export default function TutorStudentsPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     const { data, error: fetchError } = await supabase
       .from("students")
@@ -66,11 +69,42 @@ export default function TutorStudentsPage() {
       setStudents(data || []);
     }
     setIsLoading(false);
-  }, [supabase]);
+  };
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    let isMounted = true;
+    async function fetchData() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user || !isMounted) {
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error: fetchError } = await supabase
+        .from("students")
+        .select("*")
+        .eq("tutor_id", user.id)
+        .order("name", { ascending: true });
+
+      if (isMounted) {
+        if (fetchError) {
+          setError(`Failed to fetch students: ${fetchError.message}`);
+        } else {
+          setStudents(data || []);
+        }
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase]);
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +137,10 @@ export default function TutorStudentsPage() {
         learning_goals: "",
         weak_areas: "",
       });
-      fetchStudents();
-    } catch (err: any) {
-      setModalError(err.message || "An unexpected error occurred.");
+      loadStudents();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setModalError(msg);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -48,7 +48,7 @@ export default function TutorSessionsPage() {
 
   const supabase = createClient();
 
-  const fetchData = useCallback(async () => {
+  const loadData = async () => {
     setIsLoading(true);
     setError("");
 
@@ -56,7 +56,10 @@ export default function TutorSessionsPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     // Fetch tutor's students
     const { data: studentData } = await supabase
@@ -67,9 +70,10 @@ export default function TutorSessionsPage() {
 
     if (studentData) {
       setStudents(studentData);
-      if (studentData.length > 0 && !formData.student_id) {
-        setFormData((prev) => ({ ...prev, student_id: studentData[0].id }));
-      }
+      setFormData((prev) => ({
+        ...prev,
+        student_id: prev.student_id || (studentData.length > 0 ? studentData[0].id : ""),
+      }));
     }
 
     // Fetch sessions
@@ -86,11 +90,62 @@ export default function TutorSessionsPage() {
     }
 
     setIsLoading(false);
-  }, [supabase]);
+  };
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function fetchData() {
+      setIsLoading(true);
+      setError("");
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user || !isMounted) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch tutor's students
+      const { data: studentData } = await supabase
+        .from("students")
+        .select("id, name, subject")
+        .eq("tutor_id", user.id)
+        .order("name", { ascending: true });
+
+      if (studentData && isMounted) {
+        setStudents(studentData);
+        setFormData((prev) => ({
+          ...prev,
+          student_id: prev.student_id || (studentData.length > 0 ? studentData[0].id : ""),
+        }));
+      }
+
+      // Fetch sessions
+      const { data: sessionData, error: sErr } = await supabase
+        .from("sessions")
+        .select("id, topic, scheduled_at, status, students(name, subject)")
+        .eq("tutor_id", user.id)
+        .order("scheduled_at", { ascending: false });
+
+      if (isMounted) {
+        if (sErr) {
+          setError(`Failed to fetch sessions: ${sErr.message}`);
+        } else {
+          setSessions((sessionData as unknown as Session[]) || []);
+        }
+        setIsLoading(false);
+      }
+    }
+
     fetchData();
-  }, [fetchData]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase]);
 
   const handleScheduleSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,9 +187,10 @@ export default function TutorSessionsPage() {
         scheduled_at: "",
         topic: "",
       });
-      fetchData();
-    } catch (err: any) {
-      setModalError(err.message || "An unexpected error occurred.");
+      loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setModalError(msg);
     } finally {
       setIsSubmitting(false);
     }

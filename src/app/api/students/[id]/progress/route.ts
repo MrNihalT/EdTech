@@ -75,11 +75,9 @@ export async function POST(
     const aiResult = await generateJSONResponse<{ summary: string }>(prompt);
 
     return NextResponse.json({ summary: aiResult.summary });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to generate progress summary";
     console.error("AI Progress Summary Error:", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to generate progress summary" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

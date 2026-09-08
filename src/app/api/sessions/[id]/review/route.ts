@@ -100,11 +100,9 @@ export async function POST(
       .eq("id", sessionId);
 
     return NextResponse.json({ review: reviewRecord });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to generate AI session review";
     console.error("AI Session Review Error:", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to generate AI session review" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

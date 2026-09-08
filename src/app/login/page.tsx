@@ -54,8 +54,9 @@ export default function LoginPage() {
         setError("Invalid user role.");
       }
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setError(msg);
       setIsLoading(false);
     }
   };
