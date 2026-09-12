@@ -128,9 +128,9 @@ export async function POST(request: Request) {
         weak_areas: weak_areas || "",
       })
       .select()
-      .single();
+      .maybeSingle();
 
-    if (studentError) {
+    if (studentError || !studentRecord) {
       // Fallback using tutor's authenticated client
       const { data: fbData, error: fbErr } = await supabase
         .from("students")
@@ -144,20 +144,17 @@ export async function POST(request: Request) {
           weak_areas: weak_areas || "",
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (!fbErr && fbData) {
         studentRecord = fbData;
         studentError = null;
       } else {
-        return NextResponse.json(
-          {
-            error: `Student record creation failed: ${
-              studentError?.message || fbErr?.message
-            }`,
-          },
-          { status: 400 }
-        );
+        const isMissingServiceKey = !process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const msg = isMissingServiceKey
+          ? "Please add SUPABASE_SERVICE_ROLE_KEY to your Vercel Environment Variables so server-side student creation can bypass RLS."
+          : `Student creation failed: ${studentError?.message || fbErr?.message}`;
+        return NextResponse.json({ error: msg }, { status: 400 });
       }
     }
 

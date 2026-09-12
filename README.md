@@ -7,7 +7,7 @@ TutorFlow is a web application designed for online 1-on-1 tutors to manage their
 ## Submission Links
 
 - **Live Working URL**: [https://ed-tech-delta.vercel.app](https://ed-tech-delta.vercel.app)
-- **GitHub Repository**: `https://github.com/MrNihalT/EdTech`
+- **GitHub Repository**: [https://github.com/MrNihalT/EdTech](https://github.com/MrNihalT/EdTech)
 
 ---
 
@@ -113,6 +113,50 @@ erDiagram
    - `homework` (jsonb array)
    - `next_topic` (text)
    - `created_at` (timestamptz)
+
+### Supabase RLS Policies & Triggers
+
+To allow seamless student creation and automatic profile syncing in Supabase:
+
+```sql
+-- 1. Automatic Profile Trigger on New User Signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, role)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    COALESCE(new.raw_user_meta_data->>'role', 'student')
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 2. Allow Tutors to Create Student Profiles & Records
+CREATE POLICY "Tutors can create student profiles"
+ON public.profiles FOR INSERT
+WITH CHECK (
+  role = 'student' AND EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid() AND profiles.role = 'tutor'
+  )
+);
+
+CREATE POLICY "Tutors can insert into students"
+ON public.students FOR INSERT
+WITH CHECK (
+  tutor_id = auth.uid()
+);
+```
 
 ---
 
