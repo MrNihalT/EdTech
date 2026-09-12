@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ role, userName }: SidebarProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -83,22 +84,33 @@ export function Sidebar({ role, userName }: SidebarProps) {
 
   const links = role === "tutor" ? tutorLinks : studentLinks;
 
-  return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between h-screen sticky top-0 shrink-0">
+  const navContent = (
+    <div className="flex flex-col justify-between h-full">
       <div>
         {/* Brand Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="font-bold text-slate-900 leading-tight">TutorFlow</h1>
+              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                {role === "tutor" ? "Tutor Workspace" : "Student Portal"}
+              </p>
+            </div>
+          </div>
+          {/* Close button for mobile menu */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="md:hidden text-slate-400 hover:text-slate-600 p-1 transition-colors"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-900 leading-tight">TutorFlow</h1>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-              {role === "tutor" ? "Tutor Workspace" : "Student Portal"}
-            </p>
-          </div>
+          </button>
         </div>
 
         {/* Navigation Links */}
@@ -113,6 +125,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-blue-50 text-blue-600 font-semibold"
@@ -133,7 +146,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
       <div className="p-4 border-t border-slate-100">
         {userName && (
           <div className="px-3.5 py-2 mb-2 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
               {userName.charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
@@ -152,6 +165,68 @@ export function Sidebar({ role, userName }: SidebarProps) {
           Logout
         </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Header Bar */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-30 w-full">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none"
+            aria-label="Toggle navigation menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <span className="font-bold text-slate-900 text-sm">TutorFlow</span>
+          </div>
+        </div>
+
+        {userName && (
+          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+            {userName.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Sidebar Overlay Drawer with Smooth Transitions */}
+      <div
+        className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ${
+          isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        {/* Smooth Backdrop */}
+        <div
+          className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
+            isOpen ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={() => setIsOpen(false)}
+        />
+        {/* Smooth Slide-out Drawer */}
+        <div
+          className={`relative w-64 max-w-[80vw] bg-white h-full shadow-2xl z-10 transform transition-transform duration-300 ease-in-out ${
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          {navContent}
+        </div>
+      </div>
+
+      {/* Desktop Fixed Sidebar */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col justify-between h-screen sticky top-0 shrink-0">
+        {navContent}
+      </aside>
+    </>
   );
 }

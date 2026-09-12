@@ -1,12 +1,13 @@
-# TutorFlow - Tutor Management & AI-Assisted Tutoring Platform
+# TutorFlow: A Session Platform for Online Tutors
 
-TutorFlow is a clean, modern web application designed for online tutors to manage 1-on-1 tutoring sessions, track student progress, and utilize Google Gemini AI to generate personalized lesson plans, session reviews, homework assignments, and overall progress summaries.
+TutorFlow is a web application designed for online 1-on-1 tutors to manage their students, schedule sessions, take debounced autosaving notes, and leverage Google Gemini AI to prepare personalized lesson plans, summarize completed sessions, assign targeted homework, and generate overall student progress summaries.
 
 ---
 
-## Live Demo & Repository
-- **Live Working URL**: `[Your Vercel Deployment Link]`
-- **GitHub Repository**: `[Your GitHub Repo Link]`
+## Submission Links
+
+- **Live Working URL**: [https://ed-tech-delta.vercel.app](https://ed-tech-delta.vercel.app)
+- **GitHub Repository**: `https://github.com/MrNihalT/EdTech`
 
 ---
 
@@ -14,63 +15,49 @@ TutorFlow is a clean, modern web application designed for online tutors to manag
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Tutor** | `tutor@tutorflow.com` | `password123` |
-| **Student** | `student@tutorflow.com` | `password123` |
+| **Tutor Account** | `tutor@tutorflow.com` | `password123` |
+| **Student Account** | `student@tutorflow.com` | `password123` |
+
+> *Note: New Tutors can also sign up publicly at `/signup`. Student accounts are created directly by Tutors inside the dashboard.*
 
 ---
 
-## Features Implemented
+## What Works (Features Implemented)
 
-1. **Role-Based Authentication & Protection**:
-   - Built using Supabase Auth & `@supabase/ssr`.
-   - Middleware protection enforcing strict route boundaries (`/tutor/*` vs `/student/*`).
-   - Tutors create student accounts server-side.
-2. **Student Profile Management**:
-   - Track Name, Subject, Level, Learning Goals, and Weak Areas.
+1. **Login with Two Roles (`tutor` & `student`)**:
+   - Server-side role enforcement via Next.js Proxy middleware ([proxy.ts](file:///d:/Asus%20Tuf%20F17/projects/next/edtech/proxy.ts)). Tutors access `/tutor/*` and students access `/student/*`. Students cannot access tutor pages or view another student's data.
+2. **Student Profiles**:
+   - Name, Subject, Current Level (Beginner/Intermediate/Advanced), Learning Goals, and Weak Areas.
 3. **Session Scheduling & Double-Booking Prevention**:
-   - Double-booking validation prevents tutors from booking multiple sessions at the exact same scheduled date and time.
+   - Tutors pick a student, date/time, and topic. Server-side validation prevents double-booking if the tutor already has a session at that exact timestamp.
 4. **Strict Session Lifecycle Enforcement**:
-   - Enforces valid sequential transitions: `scheduled` → `in_progress` → `completed` → `ai_reviewed`.
-   - Notes become read-only once a session is completed.
+   - State transition: `01 Scheduled` → `02 In progress` → `03 Completed` → `04 AI reviewed`. Invalid jumps are rejected server-side. Once completed, notes become locked and read-only.
 5. **Session Notes with ~700ms Debounced Autosave**:
-   - Notes automatically save to Supabase Postgres as the tutor types without requiring a manual save button.
-6. **Google Gemini AI Integration (`@google/genai`)**:
-   - **AI Lesson Plan**: Generates 3 objectives, a 4-point lesson outline, and 3 practice questions personalized using student profile and past session history.
-   - **AI Session Review**: Generates a summary, 2-3 homework tasks, and a next-topic suggestion based on tutor notes.
-   - **AI Progress Summary**: Generates a single concise progress paragraph analyzing all past session reviews for a student.
-7. **Student Dashboard & Homework View**:
-   - Students see upcoming sessions, past session notes in read-only form, and an interactive homework checklist.
+   - While a session is `in_progress`, notes automatically save to Supabase Postgres as the tutor types without requiring a manual save button.
+6. **AI Session Plan**:
+   - Generates 3 objectives, a 4-point lesson outline, and 3 practice questions personalized using the student's profile and past session history.
+7. **AI Session Review**:
+   - After marking a session completed, Gemini reads the tutor's notes to return a summary, 2-3 actionable homework tasks, and a next-topic suggestion.
+8. **Student Progress View**:
+   - Summarizes all past AI session reviews into a single paragraph highlighting improvements, remaining weak areas, and overall progress.
+9. **Student Dashboard & Homework Checklist**:
+   - Students see their next session, past session notes in read-only form, and an interactive homework checklist.
 
 ---
 
-## Tech Stack
+## Tech Stack & Architecture Choices
+
 - **Framework**: Next.js 16 (App Router, React 19)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS (Clean, responsive layout with mobile drawer toggle sidebar)
 - **Database & Auth**: Supabase (PostgreSQL + RLS + Supabase SSR Auth)
-- **AI Model**: Google Gemini API (`@google/genai` model `gemini-2.5-flash`)
+- **AI Model**: Google Gemini API (`@google/genai` model `gemini-3.6-flash`)
 
 ---
 
-## Environment Variables
+## Database Schema & Table Relationships
 
-Create a `.env.local` file in the root directory:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-GEMINI_API_KEY=your-google-gemini-api-key
-```
-
-> [!IMPORTANT]
-> `GEMINI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are kept strictly server-side and never exposed to the client.
-
----
-
-## Database Architecture & Relationships
-
-The application uses 5 Postgres tables managed through Supabase with Row Level Security (RLS) enabled:
+The database consists of 5 application tables with Row Level Security (RLS) enabled in Supabase:
 
 ```mermaid
 erDiagram
@@ -82,16 +69,16 @@ erDiagram
     sessions ||--o| ai_session_reviews : "1:1 session_id"
 ```
 
-### Table Definitions
+### Table Structure
 
 1. **`profiles`**:
-   - `id` (uuid, PK, references `auth.users(id)`)
+   - `id` (uuid, PK, references `auth.users(id)` on delete cascade)
    - `full_name` (text, not null)
    - `role` (text, check `role in ('tutor', 'student')`)
    - `created_at` (timestamptz)
 
 2. **`students`**:
-   - `id` (uuid, PK)
+   - `id` (uuid, PK, default `gen_random_uuid()`)
    - `user_id` (uuid, FK to `profiles.id`)
    - `tutor_id` (uuid, FK to `profiles.id`)
    - `name` (text, not null)
@@ -102,12 +89,12 @@ erDiagram
    - `created_at` (timestamptz)
 
 3. **`sessions`**:
-   - `id` (uuid, PK)
+   - `id` (uuid, PK, default `gen_random_uuid()`)
    - `tutor_id` (uuid, FK to `profiles.id`)
    - `student_id` (uuid, FK to `students.id`)
    - `scheduled_at` (timestamptz, not null)
    - `topic` (text, not null)
-   - `status` (text, check `status in ('scheduled', 'in_progress', 'completed', 'ai_reviewed')`)
+   - `status` (text, default `'scheduled'`, check `status in ('scheduled', 'in_progress', 'completed', 'ai_reviewed')`)
    - `notes` (text)
    - `created_at`, `updated_at` (timestamptz)
 
@@ -129,9 +116,9 @@ erDiagram
 
 ---
 
-## AI Prompts Explanation
+## AI Prompts & Rationale
 
-Prompt quality is essential for effective AI assistance. Rather than sending generic queries like *"generate a lesson plan"*, TutorFlow feeds the student's complete profile (subject, current level, learning goals, weak areas) and historical session context into Gemini.
+Prompt quality is critical to producing structured, actionable outputs instead of generic filler. Each prompt feeds the student's complete profile and session context to Gemini.
 
 ### 1. `SESSION_PLAN_PROMPT`
 ```text
@@ -160,7 +147,7 @@ Schema:
   "practice_questions": ["Question 1...", "Question 2...", "Question 3..."]
 }
 ```
-**Why it was written this way**: Including past session topics prevents the AI from repeating already covered material and focuses practice questions directly on the student's documented weak areas.
+**Why it was written this way**: Supplying historical session topics ensures practice questions directly target the student's documented weak areas without repeating previously taught material.
 
 ### 2. `SESSION_REVIEW_PROMPT`
 ```text
@@ -189,7 +176,7 @@ Schema:
   "next_topic": "Suggested topic for the next session"
 }
 ```
-**Why it was written this way**: Using tutor notes allows Gemini to capture specific breakthroughs or struggles that occurred during the session to produce actionable homework assignments.
+**Why it was written this way**: Reading the raw tutor notes allows Gemini to analyze student breakthroughs and difficulties, producing tailored homework tasks for reinforcement.
 
 ### 3. `PROGRESS_SUMMARY_PROMPT`
 ```text
@@ -213,7 +200,7 @@ Schema:
   "summary": "One clear, well-written paragraph explaining what the student has improved, remaining weak areas, overall progress, and what should be focused on next."
 }
 ```
-**Why it was written this way**: Synthesizes historical AI reviews on-demand without storing redundant summary records in Postgres.
+**Why it was written this way**: Generates an up-to-date, holistic evaluation of student growth on-demand without storing redundant summary records.
 
 ---
 
@@ -221,8 +208,8 @@ Schema:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/tutorflow.git
-   cd edtech
+   git clone https://github.com/MrNihalT/EdTech.git
+   cd EdTech
    ```
 
 2. **Install dependencies**:
@@ -230,8 +217,13 @@ Schema:
    npm install
    ```
 
-3. **Set up `.env.local`**:
-   Fill in your Supabase credentials and Gemini API key as shown in the Environment Variables section.
+3. **Set up Environment Variables** (`.env.local`):
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://rfxapebbovpyvgdsycem.supabase.co
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   GEMINI_API_KEY=your-gemini-api-key
+   ```
 
 4. **Run the development server**:
    ```bash
@@ -244,4 +236,4 @@ Schema:
 
 ## What I Would Build Next
 
-If I had another day to continue expanding TutorFlow, I would first integrate email notifications via Resend to automatically alert students when a session is scheduled or when AI homework is generated. Second, I would add a interactive calendar view to the Tutor Dashboard for easier visual session management and drag-and-drop rescheduling. Third, I would implement real-time session chat or audio note transcription using WebSockets to automatically convert live tutoring dialogue into structured notes. Fourth, I would enable file upload attachments so tutors can upload PDF worksheets or student homework submissions directly to session records. Finally, I would introduce automated recurring session scheduling to allow tutors to set up weekly repeating classes for regular students with a single click.
+If I had another day to expand TutorFlow, I would first integrate email notifications via Resend to automatically send students session reminders and AI-generated homework tasks when a session is scheduled or reviewed. Second, I would build an interactive visual calendar view on the Tutor Dashboard for drag-and-drop session rescheduling. Third, I would implement real-time speech-to-text session transcription using WebSockets so tutor notes are automatically populated from live lesson audio. Fourth, I would add file attachment support so tutors can attach PDF worksheets and students can upload completed homework directly to session records. Fifth, I would introduce automated recurring session scheduling to allow tutors to set up weekly repeating classes for regular students with a single click.

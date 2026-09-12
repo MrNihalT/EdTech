@@ -28,9 +28,9 @@ export default async function StudentLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       <Sidebar role="student" userName={profile?.full_name || "Student"} />
-      <main className="flex-1 p-8 max-w-7xl mx-auto overflow-x-hidden">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
         {children}
       </main>
     </div>
