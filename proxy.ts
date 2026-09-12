@@ -74,8 +74,8 @@ export async function proxy(request: NextRequest) {
     role = profile.role as "tutor" | "student";
   }
 
-  // If user is on /login or /
-  if (pathname === "/login" || pathname === "/") {
+  // If user is on /login, /signup or /
+  if (pathname === "/login" || pathname === "/signup" || pathname === "/") {
     if (role === "tutor") {
       url.pathname = "/tutor";
       return NextResponse.redirect(url);

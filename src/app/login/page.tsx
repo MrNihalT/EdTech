@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -34,14 +35,35 @@ export default function LoginPage() {
       }
 
       // Query profiles for role
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !profile) {
-        setError("Could not retrieve profile information. Please contact support.");
+      // If profile is missing, check user metadata fallback
+      if (!profile) {
+        const metaRole = data.user.user_metadata?.role as "tutor" | "student" | undefined;
+        const metaName = data.user.user_metadata?.full_name || data.user.email || "User";
+
+        if (metaRole) {
+          // Attempt self-repair profile insertion
+          const { data: newProfile } = await supabase
+            .from("profiles")
+            .upsert({
+              id: data.user.id,
+              full_name: metaName,
+              role: metaRole,
+            })
+            .select("role")
+            .maybeSingle();
+
+          profile = newProfile || { role: metaRole };
+        }
+      }
+
+      if (!profile) {
+        setError("Could not retrieve profile information. Please run the SQL trigger provided in your setup.");
         setIsLoading(false);
         return;
       }
@@ -110,9 +132,15 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center border-t border-slate-100 pt-4">
-          <p className="text-xs text-slate-400 font-medium">
-            Only invited users can access this platform.
+        <div className="mt-6 text-center border-t border-slate-100 pt-4 space-y-2">
+          <p className="text-xs text-slate-600 font-medium">
+            New tutor?{" "}
+            <Link href="/signup" className="text-blue-600 font-semibold hover:underline">
+              Create Tutor Account
+            </Link>
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Student accounts are registered by Tutors inside the dashboard.
           </p>
         </div>
       </div>
