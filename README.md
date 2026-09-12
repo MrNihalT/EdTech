@@ -41,7 +41,8 @@ TutorFlow is a web application designed for online 1-on-1 tutors to manage their
 8. **Student Progress View**:
    - Summarizes all past AI session reviews into a single paragraph highlighting improvements, remaining weak areas, and overall progress.
 9. **Student Dashboard & Homework Checklist**:
-   - Students see their next session, past session notes in read-only form, and an interactive homework checklist.
+10. **Responsive Mobile Navigation**:
+    - Smooth 300ms sliding mobile drawer navigation with backdrop overlay and hamburger menu toggle for seamless use on smartphones and tablets.
 
 ---
 
@@ -114,9 +115,20 @@ erDiagram
    - `next_topic` (text)
    - `created_at` (timestamptz)
 
-### Supabase RLS Policies & Triggers
+### Supabase Configuration, RLS Policies & Triggers
 
-To allow seamless student creation and automatic profile syncing in Supabase:
+#### 1. Authentication URL Configuration (Prevent Localhost Redirects)
+To ensure email confirmations and magic links redirect to your production app instead of `localhost`:
+1. Open your **Supabase Dashboard** -> **Authentication** -> **URL Configuration**.
+2. Set **Site URL** to `https://ed-tech-delta.vercel.app`.
+3. Add `https://ed-tech-delta.vercel.app/**` to **Redirect URLs**.
+
+#### 2. Instant Student Account Creation (Service Role Key)
+When a tutor creates a new student in the portal, the server uses `SUPABASE_SERVICE_ROLE_KEY` to automatically confirm student auth credentials (`email_confirm: true`). This allows newly created students to log in instantly without waiting for or clicking email links.
+Ensure `SUPABASE_SERVICE_ROLE_KEY` is added to your `.env.local` and Vercel Environment Variables.
+
+#### 3. Automatic Profile Trigger & RLS Policies (SQL Script)
+Run the following SQL in your Supabase SQL Editor:
 
 ```sql
 -- 1. Automatic Profile Trigger on New User Signup
