@@ -13,12 +13,12 @@ TutorFlow is a web application designed for online 1-on-1 tutors to manage their
 
 ## Test Login Credentials
 
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Tutor Account** | `tutor@tutorflow.com` | `password123` |
-| **Student Account** | `student@tutorflow.com` | `password123` |
+| Role                | Email                      | Password    |
+| :------------------ | :------------------------- | :---------- |
+| **Tutor Account**   | `niha.chiyoor@gmial.com`   | `Nihal@123` |
+| **Student Account** | `nihaltdevagiri@gmail.com` | `Nihal@123` |
 
-> *Note: New Tutors can also sign up publicly at `/signup`. Student accounts are created directly by Tutors inside the dashboard.*
+> _Note: New Tutors can also sign up publicly at `/signup`. Student accounts are created directly by Tutors inside the dashboard._
 
 ---
 
@@ -118,16 +118,20 @@ erDiagram
 ### Supabase Configuration, RLS Policies & Triggers
 
 #### 1. Authentication URL Configuration (Prevent Localhost Redirects)
+
 To ensure email confirmations and magic links redirect to your production app instead of `localhost`:
+
 1. Open your **Supabase Dashboard** -> **Authentication** -> **URL Configuration**.
 2. Set **Site URL** to `https://ed-tech-delta.vercel.app`.
 3. Add `https://ed-tech-delta.vercel.app/**` to **Redirect URLs**.
 
 #### 2. Instant Student Account Creation (Service Role Key)
+
 When a tutor creates a new student in the portal, the server uses `SUPABASE_SERVICE_ROLE_KEY` to automatically confirm student auth credentials (`email_confirm: true`). This allows newly created students to log in instantly without waiting for or clicking email links.
 Ensure `SUPABASE_SERVICE_ROLE_KEY` is added to your `.env.local` and Vercel Environment Variables.
 
 #### 3. Automatic Profile Trigger & RLS Policies (SQL Script)
+
 Run the following SQL in your Supabase SQL Editor:
 
 ```sql
@@ -177,6 +181,7 @@ WITH CHECK (
 Prompt quality is critical to producing structured, actionable outputs instead of generic filler. Each prompt feeds the student's complete profile and session context to Gemini.
 
 ### 1. `SESSION_PLAN_PROMPT`
+
 ```text
 You are an expert personalized AI tutor assistant for TutorFlow.
 Create a structured lesson plan for an upcoming 1-on-1 tutoring session.
@@ -203,9 +208,11 @@ Schema:
   "practice_questions": ["Question 1...", "Question 2...", "Question 3..."]
 }
 ```
+
 **Why it was written this way**: Supplying historical session topics ensures practice questions directly target the student's documented weak areas without repeating previously taught material.
 
 ### 2. `SESSION_REVIEW_PROMPT`
+
 ```text
 You are an expert personalized AI tutor assistant for TutorFlow.
 Summarize a completed tutoring session and generate homework based on tutor notes.
@@ -232,9 +239,11 @@ Schema:
   "next_topic": "Suggested topic for the next session"
 }
 ```
+
 **Why it was written this way**: Reading the raw tutor notes allows Gemini to analyze student breakthroughs and difficulties, producing tailored homework tasks for reinforcement.
 
 ### 3. `PROGRESS_SUMMARY_PROMPT`
+
 ```text
 You are an expert personalized AI tutor assistant for TutorFlow.
 Generate a comprehensive progress summary for a student based on all past session reviews.
@@ -256,6 +265,7 @@ Schema:
   "summary": "One clear, well-written paragraph explaining what the student has improved, remaining weak areas, overall progress, and what should be focused on next."
 }
 ```
+
 **Why it was written this way**: Generates an up-to-date, holistic evaluation of student growth on-demand without storing redundant summary records.
 
 ---
@@ -263,17 +273,20 @@ Schema:
 ## How to Run Locally
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/MrNihalT/EdTech.git
    cd EdTech
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Set up Environment Variables** (`.env.local`):
+
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://rfxapebbovpyvgdsycem.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
@@ -282,6 +295,7 @@ Schema:
    ```
 
 4. **Run the development server**:
+
    ```bash
    npm run dev
    ```
